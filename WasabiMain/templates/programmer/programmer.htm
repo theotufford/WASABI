@@ -12,34 +12,41 @@
   <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='favicon/apple-touch-icon.png')}}" >
   <meta name="apple-mobile-web-app-title" content="W.A.S.A.B.I" />
   <link rel="manifest" href="{{ url_for('static', filename='favicon/site.webmanifest')}}" >
+
   <title>Programmer</title>
 </head>
 <body>
-
 <div id="experimentContainer">
+      <br>
   <div id = "titleBar">
     <h2>Experiment Programmer</h2>
-    <div id="plateSelectorContainer">
-      <select id="plateSelector" onchange = 'renderPlate()'> 
-        <option value="empty" selected>select well plate</option>
+    <div id="SelectorContainer">
+    <label for="unitSelect">units: </label>
+      <select id = "unitSelect" name = "unitSelect" onchange = "updateOutput(); rememberOutput()">
+            <option value="ml">ml</option>
+            <option value="ul">ul</option>
+      </select>
+    <label for="plateSelector">plate: </label>
+      <select id="plateSelector" name = "plateSelector" onchange = 'renderPlate(); rememberOutput()'> 
         {% for plate in DBplates %}
           <option value='{{ DBplates[plate] | tojson }}'>{{ plate }}</option>
         {% endfor %}
       </select>
     </div>
   </div>
-
+  <label for="experimentTitle">Name experiment:</label>
+  <input name = "experimentTitle" id = "title">
 
 <div class="hidden" id = "instructionformtemp" >
   <div class = "selectors">
-    <select class="pumpDropdown"> 
+    <select class="pumpDropdown" onchange = "rememberOutput()"> 
       <option value="empty" selected>select pump contents</option>
       {% for pump in PumpContents %} 
         <option value="{{ PumpContents[pump] }}">{{ PumpContents[pump] }}</option>
       {% endfor %}
     </select>
     <br>
-    <select class = "shorthand methodSelect" onchange = "updateMethod(this)">
+    <select class = "shorthand methodSelect" onchange = "updateMethod(this); rememberOutput()">
       <option value="empty" selected>select method</option>
       <option value="constant"> constant volume </option>
       <option value="Gradient"> 1D gradient </option>
@@ -51,17 +58,11 @@
 
   <div class = "formInfoBlock ">
   <div class = "shorthand cornerInputContainer">
-    <input class = "wellSelector" value = "from" 
-        onclick=
-        "if(this.value === 'from'){this.value=''}else{};" 
-        onchange = 
-          "verifyWellInput(this)" >
+    <input class = "wellSelector" placeholder = "from" 
+        onchange = "verifyWellInput(this); rememberOutput()" >
     </input>
-    <input class = "wellSelector" value = "to" 
-        onclick=
-        "if(this.value === 'to'){this.value=''}else{};" 
-        onchange = 
-          "verifyWellInput(this)" >
+    <input class = "wellSelector" placeholder = "to" 
+        onchange = "verifyWellInput(this); rememberOutput()" >
     </input>
   </div>
   </div>
@@ -69,7 +70,7 @@
   </div>
 
   <div class = "tabControls shorthand">
-    <button onclick = "deleteform(this)">x</button>
+    <button onclick = "deleteform(this); rememberOutput()">x</button>
     <button onclick = "setActiveForm(this.parentElement.parentElement)">o</button>
   </div>
 </div>
@@ -83,16 +84,17 @@
 
 
 <div id = "expansionButtons">
-  <button 
-    class = "mediumButton"
-    onclick="makeCopy()">
-    add instruction
-  </button>
-  <br>
-  <label for="experimentTitle">Name experiment:</label>
-  <input name = "experimentTitle" id = "title">
-  <br>
-  <button class = "mediumButton" onclick='logExperiment({{url_for("programmer.programmer") }})'>Store Experiment</button>
+  <button class = "mediumButton" onclick="makeCopy()"> add instruction </button>
+  <button class = "mediumButton" onclick='rememberOutput(); logExperiment({{url_for("programmer.programmer") }})'>Store Experiment</button>
+    <div class="dropdown">
+      <button onclick="showFunction('myDropdown')" class="dropbtn">load past experiment</button>
+      <div id="myDropdown" class="dropdown-content">
+        <input class="DDsearch" type="text" placeholder="Search.." id="myInput" onkeyup="filterFunction('myInput','myDropdown')">
+          {% for experiment in experiments %}
+          <a onclick = "">{{experiment[0]}}</a>
+          {% endfor %}
+      </div>
+    </div>
 </div>
 </div>
 
@@ -109,11 +111,11 @@
 
   <div class = "customMethodForm" id = "constant">
     <label for="volumeinput"> volume: </label>
-          <input name = "volumeinput" class = "constantVolume" style = "width: 3vw" onchange = "updateOutput('volume', parseInt(this.value))">
+          <input name = "volumeinput" class = "volume" style = "width: 3vw" onchange = "updateOutput('volume', parseInt(this.value)); rememberOutput()">
     </input>
     <br>
     <label for="unitSelect">units: </label>
-      <select class = "unitSelect" name = "unitSelect" onchange = "updateOutput()">
+      <select class = "unitSelect" name = "unitSelect" onchange = "updateOutput(); rememberOutput();">
             <option value="ml">ml</option>
             <option value="ul">ul</option>
       </select>
@@ -121,7 +123,7 @@
 
   <div class = "customMethodForm" id = "Gradient">
     <label for="gradSelect">Select Gradient Direction</label>
-    <select name = "gradSelect" class = "gradientDirectionSelect" onchange = "updateOutput('direction', this.value)">
+    <select name = "gradSelect" class = "direction" onchange = "updateOutput('direction', this.value); rememberOutput()">
       <option value="right"> rightward </option>
       <option value="left"> leftward </option>
       <option value="down"> downward </option>
@@ -129,19 +131,25 @@
     </select>
     <br>
     <label for="initialVolume"> initialVolume: </label>
-    <input name = "initialVolume" class = "gradVolume" style = "width: 3vw" oninput = "updateOutput('initialVolume', parseInt(this.value))">
+    <input name = "initialVolume" class = "initialVolume" style = "width: 3vw" oninput = "updateOutput('initialVolume', parseInt(this.value)); rememberOutput()">
     </input>
     <br>
     <label for="increment"> increment </label>
-    <input name = "increment" class = "gradVolume" style = "width: 3vw" oninput = "updateOutput('increment', parseInt(this.value))">
+    <input name = "increment" class = "increment" style = "width: 3vw" oninput = "updateOutput('increment', parseInt(this.value)); rememberOutput()">
     </input>
     <br>
-    <label for="unitSelect">units: </label>
-      <select class = "unitSelect" name = "unitSelect" onchange = "updateOutput()">
-            <option value="ml">ml</option>
-            <option value="ul">ul</option>
-      </select>
   </div>
 
 </div>
+  <!-- stuff to call on load, assign url imports a url from the jinja "url_for" function-->
+  <script>
+  assignUrl("{{url_for('agent.sessionPut')}}", 'sessionPut');
+  assignUrl("{{url_for('agent.sessionGet')}}", 'sessionGet');
+  recoverExperiment();
+  document.addEventListener('DOMContentLoaded', function() {
+    const plateSelector = document.getElementById("plateSelector")
+    selectorNullItemRemove()
+  });
+  </script>
+
 </body>

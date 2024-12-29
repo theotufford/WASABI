@@ -36,4 +36,8 @@ def create_app(test_config=None):
 
     from . import agent
     app.register_blueprint(agent.bp)
+
+    from . import middleMan
+    app.register_blueprint(middleMan.bp)
+
     return app

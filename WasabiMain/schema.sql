@@ -12,7 +12,6 @@ CREATE TABLE pumpatlas (
 
 CREATE TABLE experiments (
   title TEXT,
-  experimentid INTEGER PRIMARY KEY AUTOINCREMENT,
   created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   runHistory TEXT,
   instructions TEXT, 
