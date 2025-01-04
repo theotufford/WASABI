@@ -13,7 +13,10 @@ CREATE TABLE pumpatlas (
 CREATE TABLE experiments (
   title TEXT,
   created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  runHistory TEXT,
+  version INT DEFAULT 0,
+  pastRunInstructions TEXT,
   instructions TEXT, 
-  tray TEXT
+  machineCode TEXT,
+  pastMachineCode TEXT,
+  runcount INTEGER
 );

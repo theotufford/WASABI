@@ -307,6 +307,16 @@ function cornerHighlight(input) {
   }
 }
 
+function stupidFetch(url, reqData) {
+  fetch(url, {
+    body: JSON.stringify(reqData),
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+  .then((response) => response.json())
+}
 
 
 

@@ -14,16 +14,9 @@ bp = Blueprint('programmer', __name__, url_prefix='/program')
 def programmer():
     db = get_db()
     if  request.method == "POST":
-        experimentInstructions = request.get_json()['instructions']
-        experimentTitle = request.get_json()['name'] 
-        print(experimentTitle)
-        db.execute(
-            "INSERT INTO experiments (title, instructions) VALUES (?, ?)", (json.dumps(experimentTitle), json.dumps(experimentInstructions))
-        ).fetchall()
-        db.commit()
-        return experimentInstructions
+        compare_and_update(request.get_json())
+        return "meowwww"
         flash(error)
-
     with current_app.open_resource('./static/resources/config.json') as f:
         PlateInfo = json.loads(f.read())["machineInfo"]["plates"]
 
@@ -39,3 +32,45 @@ def programmer():
 @bp.route('/test', methods=("GET","POST"))
 def test():
     return render_template("programmer/test.htm")
+
+
+def compare_and_update(package):
+    name = package['name']
+    data = json.dumps(package['instructions'])
+    db = get_db()
+    try:
+        current = db.execute(
+            "SELECT instructions FROM experiments WHERE title = ?", (name,)
+        ).fetchone()[0]
+    except Exception as e:
+        current = None
+        pass
+
+    if current is None:
+        db.execute(
+            "INSERT INTO experiments (title, instructions) VALUES (?, ?)", (name, data,)
+        ).fetchall()
+        db.commit()
+
+    elif current == data:
+        print("duplicate stopped")
+    else:
+        version = db.execute(
+            "SELECT version FROM experiments WHERE title = ?", (name,)
+        ).fetchone()[0]
+        pastData = f"(version{version}, {current})"
+        version = version + 1
+        try:
+            history = db.execute(
+                "SELECT pastRunInstructions FROM experiments WHERE title = ?", (name,)
+            ).fetchone()[0]
+            history = history + "," + pastData
+        except Exception as e:
+            history = pastData
+        pushtobackup = db.execute(
+            "INSERT INTO experiments (pastRunInstructions , version, instructions) VALUES (?,?,?)", (history,version,data,)
+        ).fetchall()
+        db.commit()
+
+
+
