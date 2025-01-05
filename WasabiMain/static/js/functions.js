@@ -2,11 +2,18 @@
 // I still am
 // but good luck deciphering this nightmare I did my best to comment it but honestly I dont even remember why I did some things lol
 const output = {};
-output["instructions"] = {};
 const svgns = "http://www.w3.org/2000/svg";
 const alphabet = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
 let highlight = [];
 let lastCell = " ";
+loadedurls = {};
+
+function assignUrl(url, key) {
+   loadedurls[key] = url;
+}
+
+
+
 function showFunction(divID) {
   document.getElementById(divID).classList.toggle("show");
 }
@@ -63,16 +70,34 @@ function childSearch(QS){
   return childrenInActiveForm
 }
 
+function rememberOutput() {
+  updateOutput()
+  console.log(output)
+  let url = loadedurls["sessionPut"]
+  fetch(url, {
+    body: JSON.stringify({
+      key: "ExperimentMemory",
+      updatedValue: output
+    }),
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+  .then((response) => console.log(response.json()))
+}
 
 function updateOutput(inkey,inval) {
   // sort of an event function that gets called whenever the output should be updated
   // the arguments are for setting the unique paramters of the method that will get used later by the translator 
-  let highlightedElements = document.querySelectorAll(".highlightedWell")
+  const plate = document.getElementById("plateSelector")
+  const dimensions = plate.options[plate.selectedIndex].text;
+  const highlightedElements = document.querySelectorAll(".highlightedWell")
   let wellids = [];
   let currentForm = getActiveForm().id
-  let method = childSearch(".methodSelect")[0].value
+  const method = childSearch(".methodSelect")[0].value
   let contents = childSearch(".pumpDropdown")[0].value
-  let units = childSearch(".unitSelect")[0].value
+  let units = document.getElementById("unitSelect").value
   highlightedElements.forEach( well => {
   wellids.push(well.id) 
   });
@@ -80,15 +105,19 @@ function updateOutput(inkey,inval) {
   if (output[currentForm] === undefined) {
     output[currentForm] = {};
   }
+  output["dimensions"] = dimensions;
   let parentdict = output[currentForm]
   parentdict["ids"] = wellids;
   parentdict["method"] = method;
   parentdict["contents"] = contents;
   parentdict["units"] = units;
   if (typeof inkey !== 'undefined' && typeof inval !== 'undefined') {
-    parentdict["methodInfo"] = {};
+    if (parentdict["methodInfo"] === undefined) {
+      parentdict["methodInfo"] = {};
+    }
     parentdict["methodInfo"][inkey] = inval;
   }
+
 }
 function highlightToggle(key) {
   let object = document.getElementById(key);
@@ -189,6 +218,7 @@ function makeCopy() {
   clone.id = "instructionform" + target.childElementCount;
   setActiveForm(clone);
   selectorNullItemRemove()
+  rememberOutput();
 }
 //this is a function for finding an "aunt" container (parents parents child[of "auntClass" ])
 function auntContainer(me, auntClass){
@@ -206,7 +236,6 @@ function updateMethod(localSelect){
   methodContainer.appendChild(methodForm)
   output[activeForm] = {}
   output[activeForm]["method"] = method;
-  console.log(output)
 }
 //dropdown search filter
 function filterFunction(inputobj,divobj) {
@@ -317,7 +346,6 @@ function setActiveForm(active) {
     let shorthandContainer = childSearch(".shortHandInfoContainer")[0]
     let outputobj = output[formKey]
     let last  = outputobj.ids.length - 1
-    console.log(last)
     shorthandContainer.innerHTML = "<p>" + outputobj.ids[0] + " - " + outputobj.ids[last] + ": " + outputobj.method + ": " + outputobj.contents + "</p>";
   } catch (error) {
   }finally{
@@ -357,9 +385,82 @@ function deleteform(obj){
   }
 }
 
-function defineName(name) {
-  
+function loadExperimentFromOutput(experimentData) {
+  let experiment = experimentData;
+  indexKeys = [];
+  Object.keys(experiment).forEach(key => {
+    if (!isNaN(parseInt(key.replace(/[^0-9]/g, '')))) {
+      indexKeys.push(key)
+    }
+  });
+  //select and render the correct plate
+  let plateSelector = document.getElementById("plateSelector")
+  let dimension = experiment.dimensions
+  for (let i = 0; i < plateSelector.options.length; i++) {
+    if (plateSelector.options[i].text === dimension) {
+      plateSelector.selectedIndex = i;
+      renderPlate()
+      break;
+    }
+  }
+  indexKeys.forEach(key => {
+        let form = experiment[key]
+        let ids = form.ids
+        let upperBound = ids.length - 1 ;
+        makeCopy()
+        let methodSelect = childSearch(".methodSelect")[0]
+        let wellSelectors = childSearch(".wellSelector") 
+        let contents = childSearch(".pumpDropdown")[0]
+        let methodKeys = Object.keys(form.methodInfo)
+
+        // update the method of the new form
+        for (let i = 0; i < methodSelect.options.length; i++) {
+          if (methodSelect.options[i].value === form.method) {
+            methodSelect.selectedIndex = i;
+            break;
+          }
+        }
+        updateMethod(methodSelect)
+        let unitSelect = childSearch(".unitSelect")
+        // update the well range for the new form and highlight
+        wellSelectors.forEach(selector => {
+          if (selector.placeholder === "from") {
+          selector.value = ids[0]
+          }
+          if (selector.placeholder === "to") {
+            selector.value = ids[upperBound]
+          }
+          verifyWellInput(selector)
+        });
+        
+        contents.value = form.contents//set the contents of the instruction form
+        unitSelect.value = form.units //set the units of the instruction form
+
+        //set the specifics of the method in the instruction form 
+        for (let keyI = 0; keyI <= methodKeys.length; keyI++) {
+          const element = methodKeys[keyI];
+          let input = childSearch(`.${element}`)[0]
+          input.value = form.methodInfo[element]
+          updateOutput(`${element}`, parseInt(input.value))
+        }
+  });
+  ouptut = experiment;
 }
+
+function recoverExperiment(key){
+let url = loadedurls["sessionGet"] 
+  fetch(url, {body: JSON.stringify({ key: "ExperimentMemory"}), 
+    method: 'POST',
+    headers: {
+    'Content-Type': 'application/json'
+    }
+  })
+  .then((response) => response.json())
+  .then((json) => loadExperimentFromOutput(json.out))
+  rememberOutput();
+  updateOutput();
+}
+
 
 function pumpUpdatejs(updateValue){
 
@@ -379,8 +480,11 @@ function pumpUpdatejs(updateValue){
   .then((json) => console.log(json));
 }
 
-//call on load
-document.addEventListener('DOMContentLoaded', function() {
-  const plateSelector = document.getElementById("plateSelector")
-  selectorNullItemRemove()
-});
+
+
+
+
+
+
+
+

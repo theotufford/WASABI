@@ -16,7 +16,7 @@ def programmer():
     if  request.method == "POST":
         experimentInstructions = request.get_json()['instructions']
         experimentTitle = request.get_json()['name'] 
-        print(experimentInstructions)
+        print(experimentTitle)
         db.execute(
             "INSERT INTO experiments (title, instructions) VALUES (?, ?)", (json.dumps(experimentTitle), json.dumps(experimentInstructions))
         ).fetchall()
@@ -31,7 +31,10 @@ def programmer():
 
     PumpContents = json.loads(db.execute('SELECT pumpData FROM pumpatlas').fetchone()[0])
 
-    return render_template("programmer/programmer.htm", plates=PlateInfo, DBplates = DBplates, PumpContents = PumpContents ) 
+    experiments = db.execute("SELECT title FROM experiments ").fetchall()
+
+
+    return render_template("programmer/programmer.htm", plates = PlateInfo, DBplates = DBplates, PumpContents = PumpContents, experiments = experiments) 
 
 @bp.route('/test', methods=("GET","POST"))
 def test():
