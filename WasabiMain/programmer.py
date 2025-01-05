@@ -16,14 +16,6 @@ def programmer():
     if  request.method == "POST":
         compare_and_update(request.get_json())
         return "meowwww"
-        experimentInstructions = request.get_json()['instructions']
-        experimentTitle = request.get_json()['name'] 
-        print(experimentTitle)
-        db.execute(
-            "INSERT INTO experiments (title, instructions) VALUES (?, ?)", (json.dumps(experimentTitle), json.dumps(experimentInstructions))
-        ).fetchall()
-        db.commit()
-        return experimentInstructions
         flash(error)
     with current_app.open_resource('./static/resources/config.json') as f:
         PlateInfo = json.loads(f.read())["machineInfo"]["plates"]
@@ -33,7 +25,6 @@ def programmer():
     PumpContents = json.loads(db.execute('SELECT pumpData FROM pumpatlas').fetchone()[0])
 
     experiments = db.execute("SELECT title FROM experiments ").fetchall()
-
 
     return render_template("programmer/programmer.htm", plates = PlateInfo, DBplates = DBplates, PumpContents = PumpContents, experiments = experiments) 
 
